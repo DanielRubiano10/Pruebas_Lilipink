@@ -1,56 +1,98 @@
-const express = require('express');
-const mysql = require('mysql2');
-const axios = require('axios');
-
+const express = require("express");
+const mysql = require("mysql2/promise");
+const cors = require("cors");
+const bodyParser = require("body-parser");
 
 const app = express();
 const port = 3000;
 
-// Configuración de la conexión a la base de datos
-const connection = mysql.createConnection({
-    host: 'localhost',     // Host del servidor MySQL
-    user: 'root',          // Usuario de MySQL
-    password: '',          // Contraseña de MySQL (por defecto, sin contraseña en XAMPP)
-    database: 'procesos'  // Nombre de la base de datos
-});
+app.use(cors());
+app.use(bodyParser.json());
 
-// Conectar a la base de datos
-connection.connect(error => {
-    if (error) {
-        console.error('Error de conexión a la base de datos:', error);
-        return;
+async function main() {
+  const connection = await mysql.createConnection({
+    host: "localhost",
+    user: "root",
+    password: "",
+    database: "procesos",
+  });
+
+  // Ruta para consultar si un producto existe
+  app.get("/api/ConsultaProductos", async (req, res) => {
+    const nombreProducto = req.query.nombre;
+
+    if (!nombreProducto) {
+      res.status(400).send("Por favor proporciona un nombre de producto.");
+      return;
     }
-    console.log('Conectado a la base de datos.');
+
+    try {
+      const [results] = await connection.execute(
+        "SELECT COUNT(*) AS count FROM productos WHERE nombre = ?",
+        [nombreProducto]
+      );
+      const count = results[0].count;
+      res.json({ exists: count > 0 });
+    } catch (error) {
+      console.error("Error al ejecutar la consulta:", error);
+      res.status(500).send("Error al ejecutar la consulta");
+    }
+  });
+
+  app.post("/api/RegistrarProductos", async (req, res) => {
+    const { nombre, precio } = req.body;
+
+    try {
+      await connection.execute(
+        "INSERT INTO productos (nombre, precio) VALUES (?, ?)",
+        [nombre, precio]
+      );
+      res.status(201).send("Producto insertado correctamente.");
+    } catch (error) {
+      console.error("Error al insertar el producto:", error);
+      res.status(500).send("Error al insertar el producto.");
+    }
+  });
+
+
+// Ruta para traer la información de un producto
+app.get("/api/DescripcionProductos", async (req, res) => {
+  const nombreProducto = req.query.nombre;
+
+  if (!nombreProducto) {
+    res.status(400).send("Por favor proporciona un nombre de producto.");
+    return;
+  }
+
+  try {
+    const [results] = await connection.execute(
+      "SELECT id_productos as id, nombre, precio FROM productos WHERE nombre = ?",
+      [nombreProducto]
+    );
+
+    if (results.length === 0) {
+      res.status(404).send("Producto no encontrado.");
+      return;
+    }
+
+    // Si se encontró el producto, devolver los datos
+    const producto = results[0];
+    res.json(producto);
+  } catch (error) {
+    console.error("Error al ejecutar la consulta:", error);
+    res.status(500).send("Error al ejecutar la consulta");
+  }
 });
 
-// Ruta para obtener datos de los productos de base de datos
-app.get('/api/ConsultaProductos', (req, res) => {
-    const query = 'SELECT id_productos, nombre FROM productos';
-    connection.query(query, (error, results) => {
-        if (error) {
-            console.error('Error al ejecutar la consulta:', error);
-            res.status(500).send('Error al ejecutar la consulta');
-            return;
-        }
-        res.json(results);
-    });
-});
 
-// Ruta para obtener los detalles de un producto específico por ID
-app.get('/api/SeleccionarProductos/:id_productos', (req, res) => {
-    const { id_productos } = req.params;
-    const query = 'SELECT * FROM productos WHERE id_productos = ?';
-    connection.query(query, [id_productos], (error, results) => {
-        if (error) {
-            console.error('Error al ejecutar la consulta:', error);
-            res.status(500).send('Error al ejecutar la consulta');
-            return;
-        }
-        res.json(results[0]); // Asumiendo que el id_producto es único y sólo devuelve un registro
-    });
-});
 
-// Iniciar el servidor
-app.listen(port, () => {
-    console.log('Servidor ejecutándose en http://localhost:${port}');
+  // Iniciar el servidor
+  app.listen(port, () => {
+    console.log(`Servidor ejecutándose en http://localhost:${port}`);
+  });
+}
+
+main().catch((error) => {
+  console.error("Error al iniciar el servidor:", error);
+  process.exit(1);
 });

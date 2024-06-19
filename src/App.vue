@@ -1,52 +1,39 @@
 <template>
-  <img alt="Vue logo" src="./assets/logo.png">
-  <HelloWorld :msg="varrr" />
+  <nav>
+    <!-- <router-link to="/">Home</router-link>|
+    <router-link to="/register">register</router-link>     -->
+    <a href="/">Home</a>
+    <a href="/register">register</a>
+    <button @click="reDir()">redirect</button>
+  </nav>
+  <main>
+    <!-- <RouterView  /> -->
+    <router-view />
+  </main>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
+// import ActualizarProductos from './components/MyComponent.vue'
+// import ActualizarProductos from './components/ActualizarProductos.vue'
 
 export default {
   name: 'App',
   components: {
-    HelloWorld
+    // 'main-component': ActualizarProductos
   },
-  data: () => ({
-    varrr: null,
-    dformat: null
-  }),
+  data() {
+    return {
+      xxx: '', // Modelo para almacenar el nombre del producto
+      resultado: null // Variable para almacenar el resultado de la consulta
+    };
+  },
   methods: {
-    increment() {
-
-      setInterval(() => {
-        this.date();
-      }, 800);
+    eventooo(e) {
+      console.log(`@click="ejemploEmmit()::${e}"`);
     },
-    date() {
-      this.varrr = new Date
-      this.dformat = [this.varrr.getMonth() + 1,
-      this.varrr.getDate(),
-      this.varrr.getFullYear()].join('/') + ' ' +
-        [this.varrr.getHours(),
-        this.varrr.getMinutes(),
-        this.varrr.getSeconds()].join(':');
-
+    reDir(){
+      this.$router.push({ name: 'register', params: { username: 'erina' } })
     }
-  },
-  mounted() {
-    // alert(`The initial count is.`)
-    this.increment();
   }
 }
 </script>
-
-<style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
-}
-</style>

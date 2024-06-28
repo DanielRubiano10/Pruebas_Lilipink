@@ -54,37 +54,82 @@ async function main() {
     }
   });
 
+  // Ruta para traer la información de un producto
+  app.get("/api/DescripcionProductos", async (req, res) => {
+    const nombreProducto = req.query.nombre;
 
-// Ruta para traer la información de un producto
-app.get("/api/DescripcionProductos", async (req, res) => {
-  const nombreProducto = req.query.nombre;
-
-  if (!nombreProducto) {
-    res.status(400).send("Por favor proporciona un nombre de producto.");
-    return;
-  }
-
-  try {
-    const [results] = await connection.execute(
-      "SELECT id_productos as id, nombre, precio FROM productos WHERE nombre = ?",
-      [nombreProducto]
-    );
-
-    if (results.length === 0) {
-      res.status(404).send("Producto no encontrado.");
+    if (!nombreProducto) {
+      res.status(400).send("Por favor proporciona un nombre de producto.");
       return;
     }
 
-    // Si se encontró el producto, devolver los datos
-    const producto = results[0];
-    res.json(producto);
-  } catch (error) {
-    console.error("Error al ejecutar la consulta:", error);
-    res.status(500).send("Error al ejecutar la consulta");
-  }
-});
+    try {
+      const [results] = await connection.execute(
+        "SELECT id_productos as id, nombre, precio FROM productos WHERE nombre = ?",
+        [nombreProducto]
+      );
 
+      if (results.length === 0) {
+        res.status(404).send("Producto no encontrado.");
+        return;
+      }
 
+      // Si se encontró el producto, devolver los datos
+      const producto = results[0];
+      res.json(producto);
+    } catch (error) {
+      console.error("Error al ejecutar la consulta:", error);
+      res.status(500).send("Error al ejecutar la consulta");
+    }
+  });
+
+  // Ruta DELETE para eliminar un producto por su ID
+  app.delete("/api/eliminarProducto/:id", async (req, res) => {
+    const productId = req.params.id;
+    const query = "DELETE FROM productos WHERE id_productos = ?";
+
+    try {
+      const [results] = await connection.execute(query, [productId]);
+
+      // Verificar si se eliminó algún registro
+      if (results.affectedRows === 0) {
+        return res
+          .status(404)
+          .json({ error: "No se encontró el producto para eliminar" });
+      }
+
+      res.json({ message: "Producto eliminado correctamente" });
+    } catch (error) {
+      console.error("Error al eliminar el producto:", error);
+      res.status(500).json({ error: "Error al eliminar el producto" });
+    }
+  });
+
+  app.put('/api/actualizarProducto/:id', async (req, res) => {
+    const productId = req.params.id;
+    const { nombre, precio } = req.body;
+  
+    console.log('Request Body:', req.body); // Log del cuerpo de la solicitud
+  
+    if (!nombre || !precio) {
+      console.error('Nombre o precio faltantes');
+      return res.status(400).json({ error: 'Nombre y precio son requeridos' });
+    }
+  
+    try {
+      const sql = 'UPDATE productos SET nombre = ?, precio = ? WHERE id_productos = ?';
+      const [result] = await connection.execute(sql, [nombre, precio, productId]);
+  
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ error: 'No se encontró el producto para actualizar' });
+      }
+  
+      res.json({ message: 'Producto actualizado correctamente' });
+    } catch (error) {
+      console.error('Error al actualizar el producto:', error);
+      res.status(500).json({ error: 'Error actualizando el producto' });
+    }
+  });
 
   // Iniciar el servidor
   app.listen(port, () => {
